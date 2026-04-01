@@ -1,4 +1,6 @@
 import { useState } from "react";
+import ConfirmModal from "../components/ConfirmModal";
+import ValidationModal from "../components/ValidationModal";
 
 export default function CategoriesPage({
   categories,
@@ -9,11 +11,16 @@ export default function CategoriesPage({
   const [newName, setNewName] = useState("");
   const [editing, setEditing] = useState(null);
   const [editName, setEditName] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const handleAdd = (e) => {
     e.preventDefault();
     const v = newName.trim();
-    if (!v) return alert("Enter a category name");
+    if (!v) {
+      setValidationError("Enter a category name");
+      return;
+    }
     onAddCategory(v);
     setNewName("");
   };
@@ -25,18 +32,20 @@ export default function CategoriesPage({
 
   const saveEdit = (oldName) => {
     const v = editName.trim();
-    if (!v) return alert("Enter a new name");
+    if (!v) {
+      setValidationError("Enter a new name");
+      return;
+    }
     onEditCategory(oldName, v);
     setEditing(null);
   };
 
-  const del = (cat) => {
-    if (cat === "Other") return alert('Cannot delete "Other" category');
-    if (
-      !confirm(`Delete category "${cat}"? Transactions will be moved to Other.`)
-    )
+  const requestDelete = (cat) => {
+    if (cat === "Other") {
+      setValidationError('Cannot delete "Other" category');
       return;
-    onDeleteCategory(cat);
+    }
+    setConfirmDelete(cat);
   };
 
   return (
@@ -88,7 +97,7 @@ export default function CategoriesPage({
                   </button>
                   <button
                     className="btn btn-sm btn-error"
-                    onClick={() => del(cat)}
+                    onClick={() => requestDelete(cat)}
                   >
                     Delete
                   </button>
@@ -98,6 +107,26 @@ export default function CategoriesPage({
           </div>
         ))}
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="Confirm delete"
+        message={confirmDelete ? `Delete category "${confirmDelete}"? Transactions will be moved to Other.` : ""}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          onDeleteCategory(confirmDelete);
+          setConfirmDelete(null);
+        }}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        confirmClass="btn-error"
+      />
+
+      <ValidationModal
+        isOpen={!!validationError}
+        message={validationError}
+        onClose={() => setValidationError("")}
+      />
     </div>
   );
 }
