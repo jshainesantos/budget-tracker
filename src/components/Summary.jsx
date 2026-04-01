@@ -1,5 +1,6 @@
-const formatCurrency = (n) =>
-  n.toLocaleString("en-PH", { style: "currency", currency: "PHP" });
+import React, { useEffect, useRef, useState } from "react";
+import Modal from "./Modal";
+import { formatCurrency } from "../utils/format";
 
 export default function Summary({
   transactions,
@@ -22,6 +23,26 @@ export default function Summary({
     return acc;
   }, {});
 
+  // compute budget alerts
+  const alerts = { near: [], exceeded: [] };
+  Object.entries(budgets || {}).forEach(([cat, b]) => {
+    const spent = categoryTotals[cat] || 0;
+    const pct = b > 0 ? Math.round((spent / b) * 100) : 0;
+    if (pct >= 100) alerts.exceeded.push({ cat, spent, b, pct });
+    else if (pct >= 80) alerts.near.push({ cat, spent, b, pct });
+  });
+
+  const alertCount = alerts.near.length + alerts.exceeded.length;
+  const [isModalOpen, setIsModalOpen] = useState(alertCount > 0);
+  const prevAlertCountRef = useRef(alertCount);
+
+  useEffect(() => {
+    if (alertCount > prevAlertCountRef.current) {
+      setIsModalOpen(true);
+    }
+    prevAlertCountRef.current = alertCount;
+  }, [alertCount]);
+
   return (
     <div>
       <div className="grid grid-cols-3 gap-4 mb-4">
@@ -39,39 +60,35 @@ export default function Summary({
         </div>
       </div>
 
-      {(() => {
-        const alerts = { near: [], exceeded: [] };
-        Object.entries(budgets || {}).forEach(([cat, b]) => {
-          const spent = categoryTotals[cat] || 0;
-          const pct = b > 0 ? Math.round((spent / b) * 100) : 0;
-          if (pct >= 100) alerts.exceeded.push({ cat, spent, b, pct });
-          else if (pct >= 80) alerts.near.push({ cat, spent, b, pct });
-        });
-
-        return (
-          <>
-            {alerts.exceeded.map((a) => (
-              <div key={`ex-${a.cat}`} className="alert alert-error mb-3">
-                <div>
-                  <span className="font-bold">Exceeded:</span> {a.cat} —{" "}
-                  {formatCurrency(a.spent)} used of {formatCurrency(a.b)} (
-                  {a.pct}%)
+          <Modal isOpen={isModalOpen} title="Budget Alerts" onClose={() => setIsModalOpen(false)}>
+            <div className="py-2">
+              {alerts.exceeded.length > 0 && (
+                <div className="mb-3">
+                  <div className="font-semibold text-error">Exceeded</div>
+                  <ul className="list-disc pl-5">
+                    {alerts.exceeded.map((a) => (
+                      <li key={`ex-${a.cat}`}>
+                        {a.cat} — {formatCurrency(a.spent)} used of {formatCurrency(a.b)} ({a.pct}%)
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-            ))}
+              )}
 
-            {alerts.near.map((a) => (
-              <div key={`near-${a.cat}`} className="alert alert-warning mb-3">
+              {alerts.near.length > 0 && (
                 <div>
-                  <span className="font-bold">Almost full:</span> {a.cat} —{" "}
-                  {formatCurrency(a.spent)} used of {formatCurrency(a.b)} (
-                  {a.pct}%)
+                  <div className="font-semibold text-warning">Almost full</div>
+                  <ul className="list-disc pl-5">
+                    {alerts.near.map((a) => (
+                      <li key={`near-${a.cat}`}>
+                        {a.cat} — {formatCurrency(a.spent)} used of {formatCurrency(a.b)} ({a.pct}%)
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-            ))}
-          </>
-        );
-      })()}
+              )}
+            </div>
+          </Modal>
 
       {transactions.length === 0 ? (
         <div className="card bg-base-100 p-6 items-center text-center">
