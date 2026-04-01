@@ -1,7 +1,7 @@
 import { useState } from "react";
-
-const formatCurrency = (n) =>
-  n.toLocaleString("en-PH", { style: "currency", currency: "PHP" });
+import ConfirmModal from "./ConfirmModal";
+import ValidationModal from "./ValidationModal";
+import { formatCurrency } from "../utils/format";
 
 export default function CategorySettings({ categories, budgets, onSetBudget }) {
   const [adding, setAdding] = useState(false);
@@ -11,15 +11,25 @@ export default function CategorySettings({ categories, budgets, onSetBudget }) {
   const [editing, setEditing] = useState(null);
   const [editName, setEditName] = useState("");
   const [editAmount, setEditAmount] = useState("");
+  const [validationError, setValidationError] = useState("");
+  const [confirmDeleteBudget, setConfirmDeleteBudget] = useState(null);
 
   const handleAdd = (e) => {
     e && e.preventDefault();
     const name = newName.trim();
     const v = parseFloat(newAmount);
-    if (!name) return alert("Enter a budget name");
-    if (isNaN(v) || v <= 0) return alert("Enter a valid positive amount");
-    if (budgets && Object.prototype.hasOwnProperty.call(budgets, name))
-      return alert("Budget already exists");
+    if (!name) {
+      setValidationError("Enter a budget name");
+      return;
+    }
+    if (isNaN(v) || v <= 0) {
+      setValidationError("Enter a valid positive amount");
+      return;
+    }
+    if (budgets && Object.prototype.hasOwnProperty.call(budgets, name)) {
+      setValidationError("Budget already exists");
+      return;
+    }
     onSetBudget(name, Math.round(v * 100) / 100);
     setNewName("");
     setNewAmount("");
@@ -35,16 +45,21 @@ export default function CategorySettings({ categories, budgets, onSetBudget }) {
   const saveEdit = (oldName) => {
     const name = editName.trim();
     const v = parseFloat(editAmount);
-    if (!name) return alert("Enter a budget name");
-    if (isNaN(v) || v <= 0) return alert("Enter a valid positive amount");
+    if (!name) {
+      setValidationError("Enter a budget name");
+      return;
+    }
+    if (isNaN(v) || v <= 0) {
+      setValidationError("Enter a valid positive amount");
+      return;
+    }
     onSetBudget(name, Math.round(v * 100) / 100);
     if (name !== oldName) onSetBudget(oldName, null);
     setEditing(null);
   };
 
   const deleteBudget = (name) => {
-    if (!confirm(`Delete budget "${name}"?`)) return;
-    onSetBudget(name, null);
+    setConfirmDeleteBudget(name);
   };
 
   return (
@@ -177,6 +192,25 @@ export default function CategorySettings({ categories, budgets, onSetBudget }) {
           </div>
         )}
       </div>
+      <ConfirmModal
+        isOpen={!!confirmDeleteBudget}
+        title="Confirm delete"
+        message={confirmDeleteBudget ? `Delete budget "${confirmDeleteBudget}"?` : ""}
+        onCancel={() => setConfirmDeleteBudget(null)}
+        onConfirm={() => {
+          onSetBudget(confirmDeleteBudget, null);
+          setConfirmDeleteBudget(null);
+        }}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        confirmClass="btn-error"
+      />
+
+      <ValidationModal
+        isOpen={!!validationError}
+        message={validationError}
+        onClose={() => setValidationError("")}
+      />
     </div>
   );
 }
