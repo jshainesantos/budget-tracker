@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ValidationModal from "./ValidationModal";
 
 export default function TransactionForm({ categories, budgets = {}, onAdd }) {
   const [type, setType] = useState("expense");
@@ -7,6 +8,7 @@ export default function TransactionForm({ categories, budgets = {}, onAdd }) {
   const [budget, setBudget] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
+  const [validationError, setValidationError] = useState("");
 
   useEffect(() => {
     if (!categories.includes(category)) setCategory(categories[0] || "Other");
@@ -17,7 +19,10 @@ export default function TransactionForm({ categories, budgets = {}, onAdd }) {
   const submit = (e) => {
     e.preventDefault();
     const amt = parseFloat(amount);
-    if (isNaN(amt) || amt <= 0) return alert("Enter a valid positive amount");
+    if (isNaN(amt) || amt <= 0) {
+      setValidationError("Enter a valid positive amount");
+      return;
+    }
 
     const tx = {
       id: Date.now(),
@@ -119,8 +124,14 @@ export default function TransactionForm({ categories, budgets = {}, onAdd }) {
       </div>
 
       <div className="form-control mt-4">
-        <button className="btn btn-primary">Add Transaction</button>
+        <button type="submit" className="btn btn-primary">Add Transaction</button>
       </div>
+
+      <ValidationModal
+        isOpen={!!validationError}
+        message={validationError}
+        onClose={() => setValidationError("")}
+      />
     </form>
   );
 }
